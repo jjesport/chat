@@ -1,0 +1,10 @@
+{
+  "host": "127.0.0.1",
+  "port": 9000,
+  "message_file": "messages.json",
+  "tls_cert": "server_tls/server.crt",
+  "tls_key": "server_tls/server.key",
+  "server_port": 9000,
+  "tls_enabled": true,
+  "api_token": "mi-token-seguro"
+}

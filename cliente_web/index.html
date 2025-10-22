@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cliente Web - Chat Distribuido</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .section {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    input, button {
+      padding: 8px;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    button {
+      background: #0078D7;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005a9e;
+    }
+    pre {
+      background: #222;
+      color: #0f0;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .log {
+        background: #0a0a0a;
+        color: #0f0;
+        font-family: monospace;
+        font-size: 14px;
+        border-radius: 10px;
+        padding: 12px;
+        height: 250px;
+        overflow-y: scroll;
+        box-shadow: inset 0 0 5px #000;
+        white-space: pre-wrap;
+    }
+
+    .log div {
+        opacity: 0;
+        transform: translateY(5px);
+        animation: fadeIn 0.4s ease-out forwards;
+        margin-bottom: 4px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .log-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    canvas {
+      margin-top: 20px;
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🖥 Cliente Web - Chat Distribuido</h1>
+
+  <div class="section">
+    <h2>Mensajes</h2>
+    <label>Filtrar por usuario:</label>
+    <input type="text" id="userFilter" placeholder="ej: juan">
+    <div class="log-controls">
+      <button onclick="loadMessages()">Cargar Mensajes</button>
+      <button id="autoBtn" onclick="toggleAuto()">🔄 Auto-Actualizar: OFF</button>
+    </div>
+
+    <h3>Consola de mensajes</h3>
+    <div id="logConsole" class="log">Esperando datos...</div>
+  </div>
+
+  <div class="section">
+    <h2>Estadísticas</h2>
+    <button onclick="loadStats()">Cargar Estadísticas</button>
+    <pre id="statsOutput">Esperando datos...</pre>
+    <canvas id="chartCanvas"></canvas>
+  </div>
+
+<script>
+  const API_URL = "http://127.0.0.1:8000/api";
+  const TOKEN = "mi-token-seguro"; // 💡 igual al de config.json
+  let chartInstance = null;
+  let autoRefresh = false;
+  let refreshInterval = null;
+
+  async function loadMessages() {
+    const user = document.getElementById("userFilter").value;
+    const url = user ? `${API_URL}/messages?user=${user}` : `${API_URL}/messages`;
+
+    try {
+      const res = await fetch(url, {
+        headers: { "Authorization": `Token ${TOKEN}` }
+      });
+
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+
+      const data = await res.json();
+      updateLog(data);
+    } catch (err) {
+      const logDiv = document.getElementById("logConsole");
+      logDiv.textContent = `❌ Error al cargar mensajes: ${err.message}`;
+    }
+  }
+
+    let lastMessageIds = new Set();
+
+    function updateLog(messages) {
+    const logDiv = document.getElementById("logConsole");
+
+    if (!Array.isArray(messages)) {
+        logDiv.textContent = "❌ Respuesta inválida del servidor.";
+        return;
+    }
+
+    if (messages.length === 0) {
+        logDiv.textContent = "[Sistema] No hay mensajes disponibles.";
+        return;
+    }
+
+    // Detecta nuevos mensajes comparando por ID o por combinación user+text+time
+    const newMessages = messages.filter(msg => {
+        const uniqueId = `${msg.user}-${msg.message}-${msg.time || msg.timestamp}`;
+        if (!lastMessageIds.has(uniqueId)) {
+        lastMessageIds.add(uniqueId);
+        return true;
+        }
+        return false;
+    });
+
+    // Si hay nuevos, añádelos al final con animación
+    newMessages.forEach((msg, index) => {
+        const hora = msg.time || msg.timestamp || "(sin hora)";
+        const usuario = msg.user || "desconocido";
+        const texto = msg.message || "(sin mensaje)";
+
+        const line = document.createElement("div");
+        line.textContent = `[${hora}] <${usuario}>: ${texto}`;
+        line.style.opacity = 0;
+        line.style.transform = "translateY(5px)";
+        line.style.animation = `fadeIn 0.4s ease-out forwards`;
+        line.style.animationDelay = `${index * 0.05}s`;
+
+        logDiv.appendChild(line);
+    });
+
+    // Mantén el scroll al final
+    logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+
+  function toggleAuto() {
+    const btn = document.getElementById("autoBtn");
+    autoRefresh = !autoRefresh;
+
+    if (autoRefresh) {
+      btn.textContent = "🔄 Auto-Actualizar: ON";
+      loadMessages(); // primer carga inmediata
+      refreshInterval = setInterval(loadMessages, 3000); // cada 3 segundos
+    } else {
+      btn.textContent = "🔄 Auto-Actualizar: OFF";
+      clearInterval(refreshInterval);
+      refreshInterval = null;
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch(`${API_URL}/messages`, {
+        headers: { "Authorization": `Token ${TOKEN}` }
+      });
+      const data = await res.json();
+
+      const counts = {};
+      data.forEach(msg => {
+        counts[msg.user] = (counts[msg.user] || 0) + 1;
+      });
+
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+
+      document.getElementById("statsOutput").textContent =
+        JSON.stringify(counts, null, 2);
+
+      drawChart(labels, values);
+    } catch (err) {
+      document.getElementById("statsOutput").textContent = "❌ Error al cargar estadísticas.";
+    }
+  }
+
+  function drawChart(labels, values) {
+    const ctx = document.getElementById("chartCanvas").getContext("2d");
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Mensajes por usuario',
+          data: values,
+          backgroundColor: 'rgba(0, 120, 215, 0.6)',
+          borderColor: '#005a9e',
+          borderWidth: 1,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true, title: { display: true, text: 'Mensajes' } },
+          x: { title: { display: true, text: 'Usuario' } }
+        }
+      }
+    });
+  }
+</script>
+
+
+</body>
+</html>
