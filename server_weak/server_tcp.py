@@ -1,3 +1,9 @@
+"""
+Servidor simple (sin TLS) para comparación con la versión cifrada.
+------------------------------------------------------------------
+Este servidor usa sockets TCP sin cifrado, permitiendo visualizar
+la diferencia en Wireshark con respecto a TLS.
+"""
 import socket
 import threading
 import json
