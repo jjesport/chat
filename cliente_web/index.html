@@ -4,8 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cliente Web - Chat Distribuido</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Librería Chart.js para generar gráficas estadísticas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>      
   <style>
+    /* Estilos generales del cliente web */
     body {
       font-family: 'Segoe UI', sans-serif;
       background: #f5f5f5;
@@ -15,6 +17,7 @@
       text-align: center;
       color: #333;
     }
+    /* Contenedores principales */
     .section {
       background: #fff;
       padding: 1.5rem;
@@ -22,6 +25,7 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       margin-bottom: 1.5rem;
     }
+    /* Inputs y botones */
     input, button {
       padding: 8px;
       font-size: 14px;
@@ -45,6 +49,7 @@
       max-height: 300px;
       overflow-y: auto;
     }
+    /* Consola de mensajes tipo terminal */
     .log {
         background: #0a0a0a;
         color: #0f0;
@@ -57,7 +62,7 @@
         box-shadow: inset 0 0 5px #000;
         white-space: pre-wrap;
     }
-
+    /* Animación de entrada para nuevos mensajes */
     .log div {
         opacity: 0;
         transform: translateY(5px);
@@ -84,6 +89,9 @@
 <body>
   <h1>🖥 Cliente Web - Chat Distribuido</h1>
 
+  <!-- =========================================================
+       SECCIÓN 1: Visualización y filtrado de mensajes
+  ============================================================ -->
   <div class="section">
     <h2>Mensajes</h2>
     <label>Filtrar por usuario:</label>
@@ -97,6 +105,9 @@
     <div id="logConsole" class="log">Esperando datos...</div>
   </div>
 
+  <!-- =========================================================
+       SECCIÓN 2: Estadísticas de mensajes (gráficas)
+  ============================================================ -->
   <div class="section">
     <h2>Estadísticas</h2>
     <button onclick="loadStats()">Cargar Estadísticas</button>
@@ -104,13 +115,19 @@
     <canvas id="chartCanvas"></canvas>
   </div>
 
+<!-- =========================================================
+       SCRIPT PRINCIPAL DEL CLIENTE WEB
+  ============================================================ -->
 <script>
-  const API_URL = "http://127.0.0.1:8000/api";
-  const TOKEN = "mi-token-seguro"; // 💡 igual al de config.json
-  let chartInstance = null;
-  let autoRefresh = false;
-  let refreshInterval = null;
+  const API_URL = "http://127.0.0.1:8000/api";          // Endpoint base de la API Django
+  const TOKEN = "mi-token-seguro";                      // Token de autenticación local
+  let chartInstance = null;                             // Referencia al gráfico
+  let autoRefresh = false;                              // Control de auto-actualización
+  let refreshInterval = null;                           // Intervalo del modo automático
 
+  // ---------------------------------------------------------------------------
+  // Carga y muestra los mensajes desde la API
+  // ---------------------------------------------------------------------------
   async function loadMessages() {
     const user = document.getElementById("userFilter").value;
     const url = user ? `${API_URL}/messages?user=${user}` : `${API_URL}/messages`;
@@ -130,8 +147,11 @@
     }
   }
 
-    let lastMessageIds = new Set();
+    let lastMessageIds = new Set();                      // Para evitar duplicados visuales
 
+    // ---------------------------------------------------------------------------
+  // Actualiza la consola de mensajes con animación
+  // ---------------------------------------------------------------------------
     function updateLog(messages) {
     const logDiv = document.getElementById("logConsole");
 
@@ -174,7 +194,10 @@
     // Mantén el scroll al final
     logDiv.scrollTop = logDiv.scrollHeight;
     }
-
+  // ---------------------------------------------------------------------------
+  // Alterna entre modo manual y auto-actualización
+  // ---------------------------------------------------------------------------
+  function toggleAuto() {
 
   function toggleAuto() {
     const btn = document.getElementById("autoBtn");
@@ -191,6 +214,9 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Carga estadísticas (mensajes por usuario)
+  // ---------------------------------------------------------------------------
   async function loadStats() {
     try {
       const res = await fetch(`${API_URL}/messages`, {
@@ -215,6 +241,9 @@
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Dibuja el gráfico de barras usando Chart.js
+  // ---------------------------------------------------------------------------
   function drawChart(labels, values) {
     const ctx = document.getElementById("chartCanvas").getContext("2d");
     if (chartInstance) chartInstance.destroy();
