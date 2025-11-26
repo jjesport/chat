@@ -1,0 +1,17 @@
+{
+  "server_id": "B",
+  "host": "0.0.0.0",
+  "port": 9001,
+  "rest_host": "0.0.0.0",
+  "rest_port": 5001,
+  "db_file": "messages_b.db",
+  "peer_url": "http://localhost:5000",
+  "tls_cert": "server.crt",
+  "tls_key": "server.key",
+  "heartbeat_interval": 2,
+  "sync_interval": 3,
+  "debug": false,
+  "verbose_sync": false,
+  "verbose_push": false,
+  "verbose_heartbeat": true
+}
