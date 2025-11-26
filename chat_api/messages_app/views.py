@@ -15,7 +15,11 @@ def get_messages(request):
         messages = [json.loads(line) for line in f if line.strip()]
 
     if user_filter:
-        messages = [m for m in messages if m['user'] == user_filter]
+        user_filter = user_filter.strip().lower()
+        messages = [
+            m for m in messages
+            if user_filter in m.get('user', '').strip().lower()
+        ]
     return JsonResponse(messages, safe=False)
 
 def check_token(request):

@@ -89,7 +89,7 @@
     <label>Filtrar por usuario:</label>
     <input type="text" id="userFilter" placeholder="ej: juan">
     <div class="log-controls">
-      <button onclick="loadMessages()">Cargar Mensajes</button>
+      <button id="loadMessages">Cargar mensajes</button>
       <button id="autoBtn" onclick="toggleAuto()">🔄 Auto-Actualizar: OFF</button>
     </div>
 
@@ -110,25 +110,56 @@
   let chartInstance = null;
   let autoRefresh = false;
   let refreshInterval = null;
+  document.getElementById("loadMessages").addEventListener("click", loadMessages);
 
-  async function loadMessages() {
-    const user = document.getElementById("userFilter").value;
-    const url = user ? `${API_URL}/messages?user=${user}` : `${API_URL}/messages`;
+  function loadMessages() {
+  const logDiv = document.getElementById("logConsole");
+  const userFilter = document.getElementById("userFilter").value.trim();
+  logDiv.textContent = "Cargando mensajes...";
 
-    try {
-      const res = await fetch(url, {
-        headers: { "Authorization": `Token ${TOKEN}` }
+  // Construir la URL con el filtro
+  let url = `${API_URL}/messages`;
+  if (userFilter) {
+    url += `?user=${encodeURIComponent(userFilter)}`;
+  }
+
+  fetch(url, {
+    headers: { "Authorization": `Token ${TOKEN}` }
+  })
+    .then(response => {
+      if (!response.ok) throw new Error("Error al cargar mensajes");
+      return response.json();
+    })
+    .then(messages => {
+      logDiv.textContent = ""; // limpiar la consola
+
+      if (!Array.isArray(messages) || messages.length === 0) {
+        logDiv.textContent = "No hay mensajes disponibles para este usuario.";
+        return;
+      }
+
+      logDiv.innerHTML = "";
+      messages.forEach((msg, index) => {
+        const hora = msg.time || msg.timestamp || "(sin hora)";
+        const usuario = msg.user || "desconocido";
+        const texto = msg.message || "(sin mensaje)";
+
+        const line = document.createElement("div");
+        line.textContent = `[${hora}] <${usuario}>: ${texto}`;
+        line.style.opacity = 0;
+        line.style.transform = "translateY(5px)";
+        line.style.animation = `fadeIn 0.3s ease-out forwards`;
+        line.style.animationDelay = `${index * 0.03}s`;
+
+        logDiv.appendChild(line);
       });
 
-      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
-
-      const data = await res.json();
-      updateLog(data);
-    } catch (err) {
-      const logDiv = document.getElementById("logConsole");
-      logDiv.textContent = `❌ Error al cargar mensajes: ${err.message}`;
-    }
-  }
+      logDiv.scrollTop = logDiv.scrollHeight;
+    })
+    .catch(error => {
+      logDiv.textContent = `❌ Error al cargar mensajes: ${error.message}`;
+    });
+}
 
     let lastMessageIds = new Set();
 
@@ -241,6 +272,10 @@
       }
     });
   }
+  window.onload = function() {
+    document.getElementById("loadMessages").addEventListener("click", loadMessages);
+  };
+
 </script>
 
 
